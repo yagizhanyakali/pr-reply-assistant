@@ -22,6 +22,14 @@
         "command": "pr-reply-assistant.draftReply",
         "title": "Draft PR Reply",
         "icon": "$(comment-discussion)"
+      },
+      {
+        "command": "pr-reply-assistant.runOnboarding",
+        "title": "PR Reply Assistant: Run Setup"
+      },
+      {
+        "command": "pr-reply-assistant.openSettings",
+        "title": "PR Reply Assistant: Open Settings"
       }
     ],
     "menus": {
@@ -68,7 +76,87 @@
           "endsPattern": "^\\[watch\\] build finished$"
         }
       }
-    ]
+    ],
+    "configuration": {
+      "title": "PR Reply Assistant",
+      "properties": {
+        "prReplyAssistant.modelId": {
+          "type": "string",
+          "default": "",
+          "description": "Preferred language model id used when drafting replies. Leave empty to auto-select. Set during onboarding."
+        },
+        "prReplyAssistant.modelFamily": {
+          "type": "string",
+          "default": "",
+          "description": "Fallback model family used when the saved model id is no longer available (e.g. after a Copilot model rename). Set during onboarding."
+        },
+        "prReplyAssistant.modelVendor": {
+          "type": "string",
+          "default": "",
+          "description": "Fallback model vendor (e.g. 'copilot'). Set during onboarding."
+        },
+        "prReplyAssistant.promptForModelSelection": {
+          "type": "boolean",
+          "default": false,
+          "description": "Ask to select a model each time. When false, the model from `prReplyAssistant.modelId` is used silently."
+        },
+        "prReplyAssistant.persistSelectedModel": {
+          "type": "boolean",
+          "default": true,
+          "description": "When the model selection prompt is enabled, persist the selected model as preferred."
+        },
+        "prReplyAssistant.language": {
+          "type": "string",
+          "default": "English",
+          "description": "Language used for the draft reply. Free text — e.g. 'English', 'Türkçe', 'Español'. Set during onboarding."
+        },
+        "prReplyAssistant.contextDepth": {
+          "type": "string",
+          "enum": [
+            "standard",
+            "deep"
+          ],
+          "default": "standard",
+          "enumDescriptions": [
+            "Standard: planner gathers context on demand. Fast.",
+            "Deep: pre-seeds PR-wide diagnostics and detailed diffs into the evidence pack. Slower, broader."
+          ],
+          "description": "How much context to pre-seed before the agent pipeline runs."
+        },
+        "prReplyAssistant.tone": {
+          "type": "string",
+          "enum": [
+            "balanced",
+            "concise",
+            "supportive",
+            "firm"
+          ],
+          "default": "balanced",
+          "description": "Default tone preset for draft replies."
+        },
+        "prReplyAssistant.strategy": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "agree",
+            "pushback",
+            "clarify"
+          ],
+          "default": "auto",
+          "description": "Default reply strategy. 'auto' lets the agents decide based on evidence."
+        },
+        "prReplyAssistant.askForExtraInstructions": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show a small input box for optional extra guidance each time the draft button is clicked. When false, the draft starts immediately."
+        },
+        "prReplyAssistant.onboardingComplete": {
+          "type": "boolean",
+          "default": false,
+          "description": "Internal flag indicating whether the first-time onboarding has been completed."
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "pnpm run package",
