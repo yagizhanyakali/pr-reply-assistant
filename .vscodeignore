@@ -1,5 +1,7 @@
 .vscode/**
 .vscode-test/**
+.vscode-test.mjs
+.claude/**
 src/**
 out/**
 node_modules/**
@@ -10,7 +12,9 @@ eslint.config.mjs
 esbuild.js
 tsconfig.json
 pnpm-lock.yaml
+*.vsix
 **/*.map
 **/*.ts
 !dist/**
+dist/**/*.map
 vsc-extension-quickstart.md

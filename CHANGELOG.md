@@ -2,6 +2,23 @@
 
 All notable changes to PR Reply Assistant are documented here.
 
+## [1.1.0] — 2026-05-16
+
+### Added
+
+- **Quiet output mode** — Drafts now copy/stream only the reply by default, with optional compact/full metadata via `prReplyAssistant.outputDetail`.
+- **Duplicate-click protection** — Re-clicking the same PR comment while a draft is running no longer launches stacked generation dialogs.
+- **Effort routing** — Drafting now uses deterministic fast / standard / deep routing based on anchor quality, strategy, and prompt breadth.
+- **Personal tone examples** — Optional `prReplyAssistant.personalToneExamples` setting lets drafts mirror prior PR reply style without copying exact private details.
+- **Pull request description context** — Best-effort GitHub PR title/body retrieval adds current-branch intent and scope context.
+
+### Changed
+
+- First use now works immediately with defaults; setup remains available as an optional command.
+- Local git evidence is labeled as available change context instead of overstating it as a verified PR diff.
+- Anchor fallback replies are neutral and avoid claiming code is correct when the host did not provide a verified comment range.
+- Safety-gate overrides now keep the final reply text aligned with the selected strategy.
+
 ## [1.0.0] — 2026-05-06
 
 ### Added
