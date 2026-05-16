@@ -91,7 +91,7 @@ export const CONTEXT_MODE_PRESETS: ContextModePreset[] = [
 	{
 		id: 'deep',
 		label: 'Deep context',
-		detail: 'Broader PR-wide context and diagnostics (slower)',
+		detail: 'Broader available change context and diagnostics (slower)',
 	},
 ];
 

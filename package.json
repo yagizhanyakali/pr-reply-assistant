@@ -138,7 +138,7 @@
           "default": "standard",
           "enumDescriptions": [
             "Standard: planner gathers context on demand. Fast.",
-            "Deep: pre-seeds PR-wide diagnostics and detailed diffs into the evidence pack. Slower, broader."
+            "Deep: pre-seeds available-change diagnostics and detailed diffs into the evidence pack. Slower, broader."
           ],
           "description": "How much context to pre-seed before the agent pipeline runs."
         },
@@ -168,6 +168,26 @@
           "type": "boolean",
           "default": false,
           "description": "Show a small input box for optional extra guidance each time the draft button is clicked. When false, the draft starts immediately."
+        },
+        "prReplyAssistant.outputDetail": {
+          "type": "string",
+          "enum": [
+            "replyOnly",
+            "compact",
+            "full"
+          ],
+          "default": "replyOnly",
+          "enumDescriptions": [
+            "Copy or stream only the reply text.",
+            "Include the reply plus strategy and confidence.",
+            "Include full diagnostic metadata, including planner/critic/token details."
+          ],
+          "description": "How much metadata to include in visible draft output. Full diagnostics are always kept in the Output panel."
+        },
+        "prReplyAssistant.personalToneExamples": {
+          "type": "string",
+          "default": "",
+          "description": "Optional examples of your previous PR replies. The assistant uses these only as style guidance and should not copy private details or exact phrasing."
         },
         "prReplyAssistant.onboardingComplete": {
           "type": "boolean",

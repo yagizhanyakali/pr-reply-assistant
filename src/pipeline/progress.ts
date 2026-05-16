@@ -79,9 +79,9 @@ function toolFriendlyMessage(tool: string, argsShort: string): string {
 		case 'symbol_evidence_around_comment':
 			return 'Inspecting symbols near the comment…';
 		case 'pr_diff_stat':
-			return 'Reading PR diff stat…';
+			return 'Reading available change summary…';
 		case 'pr_full_diff':
-			return 'Reading full PR diff…';
+			return 'Reading available change diff…';
 		case 'file_diff':
 			return `Reading file diff: ${argsShort}`;
 		case 'find_references':

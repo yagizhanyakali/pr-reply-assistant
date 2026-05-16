@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import {
-	CONFIG_SECTION,
 	DRAFT_REPLY_COMMAND,
 	EXTENSION_NAME,
 	PARTICIPANT_ID,
@@ -12,12 +11,14 @@ import {
 } from './presets';
 import { readUserSettings } from './settings';
 import { getUserFacingErrorMessage } from './errors';
+import { DraftInFlightRegistry } from './draftRegistry';
 import { hasChatParticipantApi, resolveModelForDraft } from './modelResolver';
 import { collectResponseWithUsage } from './llmClient';
-import { runOnboardingWizard, maybeRunOnboardingOnStartup } from './onboarding';
+import { runOnboardingWizard } from './onboarding';
 import { humanizeProgressMessage } from './pipeline/progress';
 import { runAutoDraftPipeline, runForcedDraftPipeline } from './pipeline/draft';
 import { buildForcedStrategyPrompt } from './pipeline/draft';
+import { routeDraftEffort } from './pipeline/effort';
 import { formatSingleDraftOutput } from './pipeline/format';
 import { AutoDecisionResult } from './pipeline/types';
 import { extractCommentData, getThreadConversationContext } from './context/comment';
@@ -39,6 +40,7 @@ export function activate(context: vscode.ExtensionContext): void {
 	context.subscriptions.push(output);
 	output.appendLine('Activating extension.');
 	let preferredModelId: string | undefined;
+	const inFlightDrafts = new DraftInFlightRegistry();
 
 	const runOnboardingCommand = vscode.commands.registerCommand(
 		'pr-reply-assistant.runOnboarding',
@@ -59,11 +61,10 @@ export function activate(context: vscode.ExtensionContext): void {
 	);
 	context.subscriptions.push(openSettingsCommand);
 
-	void maybeRunOnboardingOnStartup();
-
 	const draftReplyCommand = vscode.commands.registerCommand(
 		DRAFT_REPLY_COMMAND,
 		async (commentContext?: unknown) => {
+			let registeredDraftKey: string | undefined;
 			try {
 				const { commentText, commentThread, commentAuthor } = extractCommentData(commentContext);
 				if (!commentText) {
@@ -73,12 +74,17 @@ export function activate(context: vscode.ExtensionContext): void {
 					return;
 				}
 
-				const config = vscode.workspace.getConfiguration(CONFIG_SECTION);
-				if (!config.get<boolean>('onboardingComplete', false)) {
-					const completed = await runOnboardingWizard({ force: false });
-					if (!completed) {
-						return;
-					}
+				registeredDraftKey = inFlightDrafts.tryStart({
+					commentText,
+					commentAuthor,
+					uri: commentThread?.uri?.toString(),
+					range: commentThread?.range,
+				});
+				if (!registeredDraftKey) {
+					await vscode.window.showInformationMessage(
+						'PR Reply Assistant is already drafting a reply for this comment.',
+					);
+					return;
 				}
 
 				const settings = readUserSettings();
@@ -99,15 +105,26 @@ export function activate(context: vscode.ExtensionContext): void {
 					additionalInstructions = input;
 				}
 
+				const effort = routeDraftEffort({
+					commentText,
+					additionalInstructions,
+					strategy: selectedStrategyPreset.id,
+					contextDepth: settings.contextDepth,
+					anchorVerified: Boolean(commentThread?.range),
+				});
+				output.appendLine(`Effort route: ${effort}`);
+
 				const [codeContext, fullDiffContext, symbolEvidenceContext, deepContext, comprehensiveContext] =
 					await Promise.all([
 						getCodeContext(commentThread),
-						getFullPrDiffContext(commentThread),
+						effort === 'fast' ? Promise.resolve(undefined) : getFullPrDiffContext(commentThread),
 						getSymbolEvidenceContext(commentText, commentThread),
-						settings.contextDepth === 'deep'
+						effort === 'deep'
 							? getDeepContextForComment(commentThread)
 							: Promise.resolve(undefined),
-						getComprehensiveContextForComment(commentText, commentThread),
+						effort === 'deep'
+							? getComprehensiveContextForComment(commentText, commentThread)
+							: Promise.resolve(undefined),
 					]);
 
 				const threadContext = commentThread
@@ -154,6 +171,7 @@ export function activate(context: vscode.ExtensionContext): void {
 								commentUri: commentThread?.uri,
 								commentRange: commentThread?.range,
 								language: settings.language,
+								personalToneExamples: settings.personalToneExamples,
 								logger: reportProgress,
 							});
 						}
@@ -173,6 +191,7 @@ export function activate(context: vscode.ExtensionContext): void {
 							commentAuthor,
 							strategyInstruction: selectedStrategyPreset.instruction,
 							language: settings.language,
+							personalToneExamples: settings.personalToneExamples,
 						});
 						const forcedMessages = [vscode.LanguageModelChatMessage.User(forcedPrompt)];
 						const { text: reply, tokenUsage } = await collectResponseWithUsage(
@@ -197,16 +216,29 @@ export function activate(context: vscode.ExtensionContext): void {
 					selectedTonePreset,
 					selectedStrategyPreset,
 					modelLabel: `${model.name} (${model.id})`,
+					outputDetail: settings.outputDetail,
+				});
+				const diagnosticOutput = formatSingleDraftOutput({
+					result,
+					selectedTonePreset,
+					selectedStrategyPreset,
+					modelLabel: `${model.name} (${model.id})`,
+					outputDetail: 'full',
 				});
 				await vscode.env.clipboard.writeText(reply);
 				output.appendLine(
 					`Draft token usage - prompt: ${result.tokenUsage.promptTokens}, completion: ${result.tokenUsage.completionTokens}, total: ${result.tokenUsage.totalTokens}`,
 				);
+				output.appendLine(`Draft diagnostics:\n${diagnosticOutput}`);
 				await vscode.window.showInformationMessage(
-					'Draft copied to clipboard with selected strategy metadata.',
+					settings.outputDetail === 'replyOnly'
+						? 'Draft reply copied to clipboard.'
+						: 'Draft copied to clipboard with selected strategy metadata.',
 				);
 			} catch (error) {
 				await vscode.window.showErrorMessage(getUserFacingErrorMessage(error));
+			} finally {
+				inFlightDrafts.finish(registeredDraftKey);
 			}
 		},
 	);
@@ -262,11 +294,20 @@ export function activate(context: vscode.ExtensionContext): void {
 
 				const commentText = resolved.commentText ?? request.prompt;
 				const additionalInstructions = resolved.commentText ? request.prompt : '';
+				const effort = routeDraftEffort({
+					commentText,
+					additionalInstructions,
+					strategy: selectedStrategyPreset.id,
+					contextDepth: selectedContextMode.id,
+					anchorVerified: Boolean(resolved.targetRange),
+				});
+				output.appendLine(`Chat effort route: ${effort}`);
 				const deepContext =
-					selectedContextMode.id === 'deep'
+					effort === 'deep'
 						? await getDeepContextForUri(resolved.targetUri)
 						: undefined;
-				const comprehensiveContext = resolved.comprehensiveContext;
+				const comprehensiveContext =
+					effort === 'deep' ? resolved.comprehensiveContext : undefined;
 
 				stream.progress('Running strategy + drafting pipeline...');
 
@@ -288,6 +329,7 @@ export function activate(context: vscode.ExtensionContext): void {
 							commentUri: resolved.targetUri,
 							commentRange: resolved.targetRange,
 							language: userSettings.language,
+							personalToneExamples: userSettings.personalToneExamples,
 							logger: (line) => {
 								output.appendLine(`[pipeline] ${line}`);
 								stream.progress(line);
@@ -308,6 +350,7 @@ export function activate(context: vscode.ExtensionContext): void {
 							comprehensiveContext,
 							commentAuthor: resolved.commentAuthor,
 							language: userSettings.language,
+							personalToneExamples: userSettings.personalToneExamples,
 						});
 
 				const formatted = formatSingleDraftOutput({
@@ -315,11 +358,24 @@ export function activate(context: vscode.ExtensionContext): void {
 					selectedTonePreset,
 					selectedStrategyPreset,
 					modelLabel: `${model.name} (${model.id})`,
+					outputDetail: userSettings.outputDetail,
+				});
+				const diagnosticOutput = formatSingleDraftOutput({
+					result,
+					selectedTonePreset,
+					selectedStrategyPreset,
+					modelLabel: `${model.name} (${model.id})`,
+					outputDetail: 'full',
 				});
 				output.appendLine(
 					`Chat token usage - prompt: ${result.tokenUsage.promptTokens}, completion: ${result.tokenUsage.completionTokens}, total: ${result.tokenUsage.totalTokens}`,
 				);
-				stream.markdown(['## PR Reply Draft', '', '```text', formatted, '```'].join('\n'));
+				output.appendLine(`Chat diagnostics:\n${diagnosticOutput}`);
+				if (userSettings.outputDetail === 'replyOnly') {
+					stream.markdown(formatted);
+				} else {
+					stream.markdown(['## PR Reply Draft', '', '```text', formatted, '```'].join('\n'));
+				}
 			} catch (error) {
 				stream.markdown(getUserFacingErrorMessage(error));
 			}

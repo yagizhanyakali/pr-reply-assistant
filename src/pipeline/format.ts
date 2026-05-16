@@ -1,4 +1,5 @@
 import { DraftMode, StrategyPreset, TonePreset } from '../presets';
+import { OutputDetail } from '../settings';
 import { AutoDecisionResult } from './types';
 
 export function humanizeStrategy(strategy: DraftMode | 'unknown'): string {
@@ -26,7 +27,14 @@ export function formatSingleDraftOutput(params: {
 	selectedTonePreset: TonePreset;
 	selectedStrategyPreset: StrategyPreset;
 	modelLabel?: string;
+	outputDetail?: OutputDetail;
 }): string {
+	const detail = params.outputDetail ?? 'replyOnly';
+	const reply = params.result.reply.trim();
+	if (detail === 'replyOnly') {
+		return reply;
+	}
+
 	const strategyLabel =
 		params.selectedStrategyPreset.id === 'auto'
 			? `Auto -> ${humanizeStrategy(params.result.selectedStrategy)}`
@@ -35,6 +43,15 @@ export function formatSingleDraftOutput(params: {
 		typeof params.result.confidence === 'number'
 			? `${Math.round(Math.max(0, Math.min(1, params.result.confidence)) * 100)}%`
 			: 'n/a';
+	if (detail === 'compact') {
+		return [
+			reply,
+			'',
+			`Strategy: ${strategyLabel}`,
+			`Confidence: ${confidenceText}`,
+		].join('\n');
+	}
+
 	const lines: string[] = [
 		`Model: ${params.modelLabel ?? 'unknown'}`,
 		`Tone preset: ${params.selectedTonePreset.label} (${params.selectedTonePreset.detail})`,
@@ -68,6 +85,6 @@ export function formatSingleDraftOutput(params: {
 	}
 
 	lines.push(...formatRationaleLines(params.result.rationale));
-	lines.push('', 'Draft reply:', params.result.reply.trim());
+	lines.push('', 'Draft reply:', reply);
 	return lines.join('\n');
 }

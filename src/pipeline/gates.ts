@@ -12,6 +12,7 @@ export type GateOutcome = {
 	strategy: DraftMode | 'unknown';
 	confidence?: number;
 	rationale: string[];
+	reply?: string;
 };
 
 export type AnchorGateOutcome = GateOutcome & { reply: string };
@@ -41,9 +42,9 @@ export function applyAnchorGate(params: {
 		strategy: 'clarify',
 		confidence: 0.5,
 		rationale: [
-			'Anchor gate: the host did not provide an exact line range for this comment. Producing a best-effort acknowledgment based on the surrounding evidence so the reply is sendable as-is.',
+			'Anchor gate: the host did not provide an exact line range for this comment. Using a neutral acknowledgment that avoids claiming the code is correct or complete.',
 		],
-		reply: `Acknowledged — the relevant section${fileLabel} is in place and consistent with the change being discussed; no additional updates needed on my end.`,
+		reply: `Thanks, I will double-check this section${fileLabel} against the intended change before responding here.`,
 	};
 }
 
@@ -54,11 +55,13 @@ export function applySafetyGate(params: {
 	strategy: DraftMode | 'unknown';
 	confidence?: number;
 	rationale: string[];
+	reply: string;
 }): GateOutcome {
 	const passthrough: GateOutcome = {
 		strategy: params.strategy,
 		confidence: params.confidence,
 		rationale: params.rationale,
+		reply: params.reply,
 	};
 	if (params.strategy !== 'agree') {
 		return passthrough;
@@ -86,6 +89,9 @@ export function applySafetyGate(params: {
 		strategy: selectedStrategy,
 		confidence: Math.min(params.confidence ?? 0.65, highRisk ? 0.72 : 0.6),
 		rationale: [gateReason, ...params.rationale].slice(0, 2),
+		reply: highRisk
+			? 'Thanks, I am going to hold off on accepting that change as-is because this path has write/mutation behavior that needs to be preserved.'
+			: 'Thanks, I will double-check this path against the intended behavior before making that change.',
 	};
 }
 

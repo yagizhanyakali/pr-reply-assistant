@@ -24,7 +24,7 @@ export async function runOnboardingWizard(opts: { force: boolean }): Promise<boo
 	}
 
 	const intro = await vscode.window.showInformationMessage(
-		'Welcome to PR Reply Assistant. A quick 3-step setup (language, model, depth) will let you click any PR comment and get an instant draft. You can change these later in Settings.',
+		'Welcome to PR Reply Assistant. Optional setup lets you choose language, model, context depth, and personal tone examples. You can change these later in Settings.',
 		{ modal: false },
 		'Continue',
 		'Skip for now',
@@ -47,9 +47,13 @@ export async function runOnboardingWizard(opts: { force: boolean }): Promise<boo
 	if (!depth) {
 		return false;
 	}
+	const personalToneExamples = await pickPersonalToneExamples(config);
 
 	await config.update('language', language, vscode.ConfigurationTarget.Global);
 	await config.update('contextDepth', depth, vscode.ConfigurationTarget.Global);
+	if (personalToneExamples !== undefined) {
+		await config.update('personalToneExamples', personalToneExamples, vscode.ConfigurationTarget.Global);
+	}
 	if (modelChoice.modelId) {
 		await config.update('modelId', modelChoice.modelId, vscode.ConfigurationTarget.Global);
 	}
@@ -74,13 +78,29 @@ export async function maybeRunOnboardingOnStartup(): Promise<void> {
 		return;
 	}
 	const choice = await vscode.window.showInformationMessage(
-		'PR Reply Assistant: 3-step setup so the comment-icon draft works in one click.',
+		'PR Reply Assistant works with defaults. Optional setup can tune language, model, depth, and tone.',
 		'Set up now',
 		'Later',
 	);
 	if (choice === 'Set up now') {
 		await runOnboardingWizard({ force: true });
 	}
+}
+
+async function pickPersonalToneExamples(
+	config: vscode.WorkspaceConfiguration,
+): Promise<string | undefined> {
+	const current = config.get<string>('personalToneExamples', '') ?? '';
+	const typed = await vscode.window.showInputBox({
+		title: 'PR Reply Assistant — Optional: Personal tone examples',
+		prompt: 'Paste 3-5 previous PR replies to help drafts sound more like you, or leave blank.',
+		value: current,
+		ignoreFocusOut: true,
+	});
+	if (typed === undefined) {
+		return undefined;
+	}
+	return typed.trim();
 }
 
 async function pickLanguage(): Promise<string | undefined> {

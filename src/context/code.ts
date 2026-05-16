@@ -9,7 +9,7 @@ import {
 	SKIPPED_IDENTIFIER_WORDS,
 } from '../constants';
 import { truncateContext, truncateText } from '../utils';
-import { runGitDiff } from './git';
+import { runFirstAvailableDiff } from './git';
 
 export async function getCodeContext(
 	commentThread?: vscode.CommentThread,
@@ -98,30 +98,13 @@ async function getFileDiffContext(
 	const cwd = folder.uri.fsPath;
 	const diffSections: string[] = [];
 
-	const workingTreeDiff = await runGitDiff(
-		['diff', `--unified=${DIFF_UNIFIED_LINES}`, '--', relativePath],
+	const availableDiff = await runFirstAvailableDiff({
 		cwd,
-	);
-	if (workingTreeDiff) {
-		diffSections.push(`Working tree diff:\n${workingTreeDiff}`);
-	}
-
-	const stagedDiff = await runGitDiff(
-		['diff', '--cached', `--unified=${DIFF_UNIFIED_LINES}`, '--', relativePath],
-		cwd,
-	);
-	if (stagedDiff) {
-		diffSections.push(`Staged diff:\n${stagedDiff}`);
-	}
-
-	if (!diffSections.length) {
-		const lastCommitDiff = await runGitDiff(
-			['diff', `--unified=${DIFF_UNIFIED_LINES}`, 'HEAD~1', 'HEAD', '--', relativePath],
-			cwd,
-		);
-		if (lastCommitDiff) {
-			diffSections.push(`Last commit diff:\n${lastCommitDiff}`);
-		}
+		diffArgs: [`--unified=${DIFF_UNIFIED_LINES}`],
+		path: relativePath,
+	});
+	if (availableDiff) {
+		diffSections.push(`${availableDiff.label}:\n${availableDiff.text}`);
 	}
 
 	if (!diffSections.length) {

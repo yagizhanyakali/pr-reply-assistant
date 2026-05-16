@@ -77,8 +77,8 @@ export async function getComprehensiveContext(params: {
 			'3) Codebase impact (references/usages):',
 			referenceImpact ?? 'No significant reference impact found.',
 			'',
-			'4) All PR changes:',
-			allPrChanges ?? 'No PR-wide diff found.',
+			'4) Available change context:',
+			allPrChanges ?? 'No available change diff found.',
 		];
 		return truncateText(
 			sections.join('\n'),

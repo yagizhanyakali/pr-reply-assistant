@@ -158,19 +158,19 @@ export function buildContextToolRegistry(seed: {
 		},
 		{
 			name: 'pr_diff_stat',
-			description: 'List of files changed in the PR with insertion/deletion stats.',
+			description: 'List of files in the available change context with insertion/deletion stats.',
 			args: {},
 			handler: async () => {
 				const text = await getFullPrDiffContextForUri(seed.commentUri);
 				if (!text) {
 					return undefined;
 				}
-				return { summary: 'PR-wide diffstat', content: text };
+				return { summary: 'available change diffstat', content: text };
 			},
 		},
 		{
 			name: 'pr_full_diff',
-			description: 'Full unified diff across the PR (truncated). Expensive — use only when broad scope is needed.',
+			description: 'Full unified diff for the available change context (truncated). Expensive — use only when broad scope is needed.',
 			args: {},
 			handler: async () => {
 				if (!seedFolder) {
@@ -180,7 +180,7 @@ export function buildContextToolRegistry(seed: {
 				if (!text) {
 					return undefined;
 				}
-				return { summary: 'PR full diff (truncated)', content: text };
+				return { summary: 'available change diff (truncated)', content: text };
 			},
 		},
 		{
@@ -394,19 +394,19 @@ export function buildContextToolRegistry(seed: {
 		},
 		{
 			name: 'deep_context',
-			description: 'Snapshot of changed-file diagnostics and detailed diffs across the PR.',
+			description: 'Snapshot of changed-file diagnostics and detailed diffs for the available change context.',
 			args: {},
 			handler: async () => {
 				const text = await getDeepContextForUri(seed.commentUri);
 				if (!text) {
 					return undefined;
 				}
-				return { summary: 'deep PR context (diagnostics + detailed diffs)', content: text };
+				return { summary: 'deep available change context (diagnostics + detailed diffs)', content: text };
 			},
 		},
 		{
 			name: 'comprehensive_context_around_comment',
-			description: 'Bundle: full commented file, file diff, reference impact, PR-wide diff. Expensive.',
+			description: 'Bundle: full commented file, file diff, reference impact, available change diff. Expensive.',
 			args: {},
 			handler: async () => {
 				if (!seed.commentUri) {

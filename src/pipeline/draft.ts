@@ -26,6 +26,7 @@ export type AutoDraftParams = {
 	logger?: (line: string) => void;
 	commentAuthor?: string;
 	language?: string;
+	personalToneExamples?: string;
 };
 
 export type ForcedDraftParams = {
@@ -43,6 +44,7 @@ export type ForcedDraftParams = {
 	comprehensiveContext?: string;
 	commentAuthor?: string;
 	language?: string;
+	personalToneExamples?: string;
 };
 
 export async function runAutoDraftPipeline(params: AutoDraftParams): Promise<AutoDecisionResult> {
@@ -78,7 +80,7 @@ export async function runAutoDraftPipeline(params: AutoDraftParams): Promise<Aut
 				id: `E${mergedSeedEvidence.length + 1}`,
 				kind: 'note',
 				source: 'deep_context (pre-seeded by Deep depth setting)',
-				summary: 'PR-wide diagnostics + detailed diffs gathered upfront because the user opted into Deep depth.',
+				summary: 'Available-change diagnostics + detailed diffs gathered upfront because the user opted into Deep depth.',
 				content: params.deepContext,
 			},
 		];
@@ -104,6 +106,7 @@ export async function runAutoDraftPipeline(params: AutoDraftParams): Promise<Aut
 		seedEvidence: mergedSeedEvidence.length ? mergedSeedEvidence : undefined,
 		seedGaps,
 		language: params.language,
+		personalToneExamples: params.personalToneExamples,
 	});
 
 	const arbiter = pipeline.decision;
@@ -127,6 +130,7 @@ export async function runAutoDraftPipeline(params: AutoDraftParams): Promise<Aut
 		strategy: anchorGated.strategy,
 		confidence: anchorGated.confidence,
 		rationale: anchorGated.rationale,
+		reply: anchorGated.reply,
 	});
 
 	const details: PipelineDetailSummary = {
@@ -148,7 +152,7 @@ export async function runAutoDraftPipeline(params: AutoDraftParams): Promise<Aut
 		selectedStrategy: safetyGated.strategy,
 		confidence: safetyGated.confidence,
 		rationale: safetyGated.rationale,
-		reply: anchorGated.reply || '[No draft generated]',
+		reply: safetyGated.reply || anchorGated.reply || '[No draft generated]',
 		tokenUsage: pipeline.tokenUsage,
 		pipelineDetails: details,
 	};
@@ -181,6 +185,7 @@ export function buildForcedStrategyPrompt(params: {
 	comprehensiveContext?: string;
 	commentAuthor?: string;
 	language?: string;
+	personalToneExamples?: string;
 }): string {
 	const modeInstruction =
 		params.mode === 'agree'
@@ -195,6 +200,7 @@ export function buildForcedStrategyPrompt(params: {
 		params.selectedTonePreset.styleGuidance,
 		params.strategyInstruction,
 		modeInstruction,
+		buildPersonalTonePromptSection(params.personalToneExamples),
 		`Write the reply in ${language}.`,
 		'Do not use greetings or signatures.',
 		'Return only the reply text in Markdown.',
@@ -215,7 +221,7 @@ export function buildForcedStrategyPrompt(params: {
 		sections.push('', `Code context:\n${params.codeContext}`);
 	}
 	if (params.fullDiffContext) {
-		sections.push('', `PR scope (changed files):\n${params.fullDiffContext}`);
+		sections.push('', `Available change context (changed files):\n${params.fullDiffContext}`);
 	}
 	if (params.symbolEvidenceContext) {
 		sections.push('', `Structured symbol evidence:\n${params.symbolEvidenceContext}`);
@@ -228,4 +234,18 @@ export function buildForcedStrategyPrompt(params: {
 	}
 
 	return sections.join('\n');
+}
+
+function buildPersonalTonePromptSection(examples?: string): string {
+	const trimmed = examples?.trim();
+	if (!trimmed) {
+		return 'No personal tone examples were provided.';
+	}
+	const clipped =
+		trimmed.length > 1_800 ? `${trimmed.slice(0, 1_800)}\n[Personal tone examples truncated]` : trimmed;
+	return [
+		'Use the following previous PR replies only as style guidance.',
+		'Match the author\'s directness, warmth, and rhythm, but do not copy private details, names, exact sentences, or distinctive phrases unnecessarily.',
+		`Personal tone examples:\n${clipped}`,
+	].join('\n');
 }

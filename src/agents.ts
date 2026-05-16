@@ -96,6 +96,7 @@ export type PipelineInputs = {
 	seedEvidence?: EvidenceItem[];
 	seedGaps?: string[];
 	language?: string;
+	personalToneExamples?: string;
 };
 
 export type PipelineResult = {
@@ -678,6 +679,7 @@ function buildArbiterPrompt(params: {
 		'- Vue/template caveat: in Vue templates `ref` is auto-unwrapped, so `someRef === x` is valid in templates. Never flag this as a bug.',
 		'- Never invent code that is not in the evidence pack.',
 		inputs.tonePreset.styleGuidance,
+		buildPersonalToneGuidance(inputs.personalToneExamples),
 		'Reply rules:',
 		'- The reply must be READY TO SEND AS-IS. Treat it like the final PR comment, not a draft note to yourself.',
 		'- Do NOT ask the reviewer for more info, more lines, more context, or for confirmation. No questions of any kind. The reply must contain zero question marks.',
@@ -714,6 +716,18 @@ function buildArbiterPrompt(params: {
 	sections.push('', 'Evidence pack:');
 	sections.push(renderEvidencePack(evidencePack));
 	return sections.join('\n');
+}
+
+function buildPersonalToneGuidance(examples?: string): string {
+	const trimmed = examples?.trim();
+	if (!trimmed) {
+		return 'No personal tone examples were provided.';
+	}
+	return [
+		'Personal tone examples from the PR author are provided for style guidance only.',
+		'Mirror the level of directness, warmth, and phrasing rhythm, but do not copy private details, names, exact sentences, or distinctive phrases unnecessarily.',
+		`Examples:\n${truncate(trimmed, 1_800, '[Personal tone examples truncated]')}`,
+	].join('\n');
 }
 
 function parseAgentDecision(raw: string, allowExtra = false): AgentDecision {

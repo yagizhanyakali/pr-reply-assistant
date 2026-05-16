@@ -15,7 +15,11 @@ export type UserSettings = {
 	contextDepth: ContextModePreset['id'];
 	language: string;
 	askForExtraInstructions: boolean;
+	outputDetail: OutputDetail;
+	personalToneExamples: string;
 };
+
+export type OutputDetail = 'replyOnly' | 'compact' | 'full';
 
 export const DEFAULT_USER_SETTINGS: UserSettings = {
 	tone: 'balanced',
@@ -23,6 +27,8 @@ export const DEFAULT_USER_SETTINGS: UserSettings = {
 	contextDepth: 'standard',
 	language: 'English',
 	askForExtraInstructions: false,
+	outputDetail: 'replyOnly',
+	personalToneExamples: '',
 };
 
 export function readUserSettings(): UserSettings {
@@ -37,6 +43,10 @@ export function readUserSettings(): UserSettings {
 		'askForExtraInstructions',
 		DEFAULT_USER_SETTINGS.askForExtraInstructions,
 	);
+	const outputDetail = config.get<string>('outputDetail', DEFAULT_USER_SETTINGS.outputDetail);
+	const personalToneExamples =
+		config.get<string>('personalToneExamples', DEFAULT_USER_SETTINGS.personalToneExamples)?.trim() ??
+		DEFAULT_USER_SETTINGS.personalToneExamples;
 	return {
 		tone: TONE_PRESETS.some((p) => p.id === tone) ? (tone as TonePreset['id']) : DEFAULT_USER_SETTINGS.tone,
 		strategy: STRATEGY_PRESETS.some((p) => p.id === strategy)
@@ -47,5 +57,13 @@ export function readUserSettings(): UserSettings {
 			: DEFAULT_USER_SETTINGS.contextDepth,
 		language,
 		askForExtraInstructions: ask ?? DEFAULT_USER_SETTINGS.askForExtraInstructions,
+		outputDetail: isOutputDetail(outputDetail)
+			? outputDetail
+			: DEFAULT_USER_SETTINGS.outputDetail,
+		personalToneExamples,
 	};
+}
+
+function isOutputDetail(value: string): value is OutputDetail {
+	return value === 'replyOnly' || value === 'compact' || value === 'full';
 }

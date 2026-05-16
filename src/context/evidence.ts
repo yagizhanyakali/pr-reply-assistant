@@ -7,7 +7,7 @@ import {
 	SKIPPED_IDENTIFIER_WORDS,
 } from '../constants';
 import { escapeRegExp, truncateText } from '../utils';
-import { runGitDiff } from './git';
+import { runFirstAvailableDiff } from './git';
 
 export async function getSymbolEvidenceContext(
 	commentText: string,
@@ -68,9 +68,11 @@ export async function buildSymbolEvidenceFromDocumentRange(
 	let diffText: string | undefined;
 	if (folder) {
 		const cwd = folder.uri.fsPath;
-		diffText =
-			(await runGitDiff(['diff', '--unified=0', '--', relativePath], cwd)) ??
-			(await runGitDiff(['diff', '--cached', '--unified=0', '--', relativePath], cwd));
+		diffText = (await runFirstAvailableDiff({
+			cwd,
+			diffArgs: ['--unified=0'],
+			path: relativePath,
+		}))?.text;
 	}
 
 	const evidenceBlocks: string[] = [];

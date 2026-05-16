@@ -24,6 +24,50 @@ export async function runGitDiff(args: string[], cwd: string): Promise<string | 
 	}
 }
 
+export type GitDiffSource = {
+	label: string;
+	args: string[];
+};
+
+export async function runFirstAvailableDiff(params: {
+	cwd: string;
+	diffArgs?: string[];
+	path?: string;
+}): Promise<{ label: string; text: string } | undefined> {
+	const pathArgs = params.path ? ['--', params.path] : [];
+	const branchBase = await getBranchBaseRef(params.cwd);
+	const attempts: GitDiffSource[] = [
+		{
+			label: 'working tree diff',
+			args: ['diff', ...(params.diffArgs ?? []), ...pathArgs],
+		},
+		{
+			label: 'staged diff',
+			args: ['diff', '--cached', ...(params.diffArgs ?? []), ...pathArgs],
+		},
+	];
+	if (branchBase) {
+		attempts.push({
+			label: `branch-base diff (${branchBase.label})`,
+			args: ['diff', ...(params.diffArgs ?? []), branchBase.base, 'HEAD', ...pathArgs],
+		});
+	}
+	attempts.push(
+		{
+			label: 'last commit diff',
+			args: ['diff', ...(params.diffArgs ?? []), 'HEAD~1', 'HEAD', ...pathArgs],
+		},
+	);
+
+	for (const attempt of attempts) {
+		const text = await runGitDiff(attempt.args, params.cwd);
+		if (text) {
+			return { label: attempt.label, text };
+		}
+	}
+	return undefined;
+}
+
 export async function getFullPrDiffContext(
 	commentThread?: vscode.CommentThread,
 ): Promise<string | undefined> {
@@ -40,30 +84,12 @@ export async function getFullPrDiffContextForUri(uri?: vscode.Uri): Promise<stri
 
 	const cwd = folder.uri.fsPath;
 
-	const workingTreeStat = await runGitDiff(['diff', '--stat'], cwd);
-	if (workingTreeStat) {
+	const available = await runFirstAvailableDiff({ cwd, diffArgs: ['--stat'] });
+	if (available) {
 		return truncateText(
-			`Changed files (working tree):\n${workingTreeStat}`,
+			`Available change context (${available.label}):\n${available.text}`,
 			MAX_PR_STAT_CHARS,
-			'[PR stat truncated due to length.]',
-		);
-	}
-
-	const stagedStat = await runGitDiff(['diff', '--cached', '--stat'], cwd);
-	if (stagedStat) {
-		return truncateText(
-			`Changed files (staged):\n${stagedStat}`,
-			MAX_PR_STAT_CHARS,
-			'[PR stat truncated due to length.]',
-		);
-	}
-
-	const lastCommitStat = await runGitDiff(['diff', '--stat', 'HEAD~1', 'HEAD'], cwd);
-	if (lastCommitStat) {
-		return truncateText(
-			`Changed files (last commit):\n${lastCommitStat}`,
-			MAX_PR_STAT_CHARS,
-			'[PR stat truncated due to length.]',
+			'[Available change context truncated due to length.]',
 		);
 	}
 
@@ -74,25 +100,31 @@ export async function getPageDiffContext(
 	cwd: string,
 	relativePath: string,
 ): Promise<string | undefined> {
-	const diff =
-		(await runGitDiff(['diff', '--unified=6', '--', relativePath], cwd)) ??
-		(await runGitDiff(['diff', '--cached', '--unified=6', '--', relativePath], cwd)) ??
-		(await runGitDiff(['diff', '--unified=6', 'HEAD~1', 'HEAD', '--', relativePath], cwd));
+	const diff = await runFirstAvailableDiff({
+		cwd,
+		diffArgs: ['--unified=6'],
+		path: relativePath,
+	});
 	if (!diff) {
 		return undefined;
 	}
-	return truncateText(diff, MAX_FILE_DIFF_CONTEXT_CHARS, '[Page diff truncated due to length.]');
+	return truncateText(
+		`${diff.label}:\n${diff.text}`,
+		MAX_FILE_DIFF_CONTEXT_CHARS,
+		'[Page diff truncated due to length.]',
+	);
 }
 
 export async function getAllPrChangesContext(cwd: string): Promise<string | undefined> {
-	const diff =
-		(await runGitDiff(['diff', '--unified=3'], cwd)) ??
-		(await runGitDiff(['diff', '--cached', '--unified=3'], cwd)) ??
-		(await runGitDiff(['diff', '--unified=3', 'HEAD~1', 'HEAD'], cwd));
+	const diff = await runFirstAvailableDiff({ cwd, diffArgs: ['--unified=3'] });
 	if (!diff) {
 		return undefined;
 	}
-	return truncateText(diff, MAX_ALL_PR_CHANGES_CHARS, '[PR-wide diff truncated due to length.]');
+	return truncateText(
+		`${diff.label}:\n${diff.text}`,
+		MAX_ALL_PR_CHANGES_CHARS,
+		'[Available change context truncated due to length.]',
+	);
 }
 
 export async function getDeepContextForComment(
@@ -132,14 +164,11 @@ export async function getDeepContextForUri(uri?: vscode.Uri): Promise<string | u
 }
 
 async function getChangedFilesForDeepContext(cwd: string): Promise<string[]> {
-	const working = await runGitDiff(['diff', '--name-only'], cwd);
-	const staged = await runGitDiff(['diff', '--cached', '--name-only'], cwd);
-	const lastCommit = await runGitDiff(['diff', '--name-only', 'HEAD~1', 'HEAD'], cwd);
-	const raw = working ?? staged ?? lastCommit;
-	if (!raw) {
+	const diff = await runFirstAvailableDiff({ cwd, diffArgs: ['--name-only'] });
+	if (!diff) {
 		return [];
 	}
-	return raw
+	return diff.text
 		.split('\n')
 		.map((line) => line.trim())
 		.filter((line) => Boolean(line))
@@ -189,16 +218,45 @@ async function getDetailedDiffForChangedFiles(
 	const selected = changedFiles.slice(0, MAX_DEEP_DIFF_FILES);
 	const snippets: string[] = [];
 	for (const file of selected) {
-		const diff =
-			(await runGitDiff(['diff', '--unified=3', '--', file], cwd)) ??
-			(await runGitDiff(['diff', '--cached', '--unified=3', '--', file], cwd));
+		const diff = await runFirstAvailableDiff({
+			cwd,
+			diffArgs: ['--unified=3'],
+			path: file,
+		});
 		if (!diff) {
 			continue;
 		}
-		snippets.push(`File diff: ${file}\n${truncateText(diff, 1_500, '[File diff truncated.]')}`);
+		snippets.push(`File diff: ${file} (${diff.label})\n${truncateText(diff.text, 1_500, '[File diff truncated.]')}`);
 	}
 	if (!snippets.length) {
 		return undefined;
 	}
 	return ['Detailed diffs for top changed files:', ...snippets].join('\n\n');
+}
+
+async function getBranchBaseRef(cwd: string): Promise<{ base: string; label: string } | undefined> {
+	const candidates = await getBranchBaseCandidates(cwd);
+	for (const candidate of candidates) {
+		const base = await runGitDiff(['merge-base', 'HEAD', candidate], cwd);
+		if (base) {
+			return { base, label: candidate };
+		}
+	}
+	return undefined;
+}
+
+async function getBranchBaseCandidates(cwd: string): Promise<string[]> {
+	const candidates: string[] = [];
+	const originHead = await runGitDiff(['symbolic-ref', 'refs/remotes/origin/HEAD', '--short'], cwd);
+	if (originHead) {
+		candidates.push(originHead);
+	}
+	candidates.push('origin/main', 'origin/master', 'main', 'master', '@{upstream}');
+	const unique: string[] = [];
+	for (const candidate of candidates) {
+		if (!unique.includes(candidate)) {
+			unique.push(candidate);
+		}
+	}
+	return unique;
 }
