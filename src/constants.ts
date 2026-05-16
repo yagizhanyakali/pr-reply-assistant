@@ -25,6 +25,7 @@ export const MAX_FILE_DIFF_CONTEXT_CHARS = 8_000;
 export const MAX_REFERENCE_IMPACT_CHARS = 5_000;
 export const MAX_ALL_PR_CHANGES_CHARS = 12_000;
 export const MAX_COMPREHENSIVE_CONTEXT_CHARS = 20_000;
+export const MAX_PR_DESCRIPTION_CHARS = 4_000;
 
 export const SKIPPED_IDENTIFIER_WORDS = new Set([
 	'const',

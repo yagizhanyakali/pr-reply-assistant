@@ -929,6 +929,9 @@ function inferEvidenceKind(toolName: string): EvidenceKind {
 	if (lower.includes('thread')) {
 		return 'thread';
 	}
+	if (lower.includes('description')) {
+		return 'note';
+	}
 	if (lower.includes('web') || lower.includes('search')) {
 		return 'web';
 	}

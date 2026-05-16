@@ -8,6 +8,7 @@ Draft context-aware, well-reasoned replies to GitHub pull request comments direc
 
 - Adds a **Draft PR Reply** icon button (`$(comment-discussion)`) to every PR comment's title toolbar.
 - Reads the `vscode.Comment` text plus the parent `CommentThread` file and line range.
+- Best-effort reads the GitHub PR title/body from the current branch for intent and scope context.
 - Optionally prompts for extra one-off guidance before drafting.
 - Runs the full multi-agent quality pipeline for `Auto` strategy (see [Pipeline](#pipeline)).
 - Copies the final draft to clipboard. Metadata is hidden by default and remains available in the Output panel.
@@ -43,6 +44,7 @@ Safety gates run after the pipeline:
 The Planner has access to a suite of context tools it calls on demand:
 
 - `code_context_around_comment` — code lines + diff hunks + related symbol snippets around the comment anchor
+- `pull_request_description` — best-effort GitHub PR title/body for current-branch intent
 - `read_file_range` / `read_full_file` — arbitrary workspace file reads
 - `git_diff_file` / `git_diff_pr` / `git_log` — file-level available-change diffs and commit history
 - `symbol_evidence` — structured write/read/mutation analysis for symbols in scope
@@ -158,6 +160,7 @@ src/
 │   ├── comprehensive.ts  # getComprehensiveContext — full-page, ref-impact, PR changes
 │   ├── evidence.ts       # getSymbolEvidenceContext — symbol write/read/mutation analysis
 │   ├── git.ts            # git diff and deep context helpers
+│   ├── prDescription.ts  # best-effort GitHub PR title/body retrieval
 │   └── web.ts            # fetchDuckDuckGoSummary
 └── pipeline/
     ├── draft.ts          # runAutoDraftPipeline, runForcedDraftPipeline, buildForcedStrategyPrompt
@@ -202,4 +205,5 @@ src/
 - Default visible output is now reply-only; compact/full metadata can be enabled in settings.
 - Duplicate clicks on the same comment reuse the active draft run instead of launching stacked progress notifications.
 - Added deterministic effort routing and personal tone examples.
+- Added best-effort GitHub PR description context from the current branch.
 - Reworded available-change context labels so local git evidence is not overstated as a verified GitHub PR diff.

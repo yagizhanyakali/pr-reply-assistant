@@ -7,6 +7,8 @@ import { formatSingleDraftOutput } from '../pipeline/format';
 import { applyAnchorGate, applySafetyGate } from '../pipeline/gates';
 import { AutoDecisionResult } from '../pipeline/types';
 import { emptyTokenUsage } from '../llmClient';
+import { parseGitHubRemote } from '../context/prDescription';
+import { buildForcedStrategyPrompt } from '../pipeline/draft';
 
 suite('Extension Test Suite', () => {
 	const tone = TONE_PRESETS[0];
@@ -176,5 +178,30 @@ suite('Extension Test Suite', () => {
 			completionTokens: 0,
 			totalTokens: 0,
 		});
+	});
+
+	test('parses GitHub HTTPS and SSH remotes for PR description lookup', () => {
+		assert.deepStrictEqual(
+			parseGitHubRemote('https://github.com/yagizhanyakali/pr-reply-assistant.git'),
+			{ owner: 'yagizhanyakali', repo: 'pr-reply-assistant' },
+		);
+		assert.deepStrictEqual(
+			parseGitHubRemote('git@github.com:openai/example.git'),
+			{ owner: 'openai', repo: 'example' },
+		);
+		assert.strictEqual(parseGitHubRemote('https://gitlab.com/openai/example.git'), undefined);
+	});
+
+	test('forced prompt includes pull request description when available', () => {
+		const prompt = buildForcedStrategyPrompt({
+			mode: 'agree',
+			commentText: 'Please use the shared helper.',
+			additionalInstructions: '',
+			selectedTonePreset: tone,
+			strategyInstruction: autoStrategy.instruction,
+			prDescriptionContext: 'Pull request description:\nAdds the shared helper migration.',
+		});
+		assert.match(prompt, /Pull request description/);
+		assert.match(prompt, /shared helper migration/);
 	});
 });

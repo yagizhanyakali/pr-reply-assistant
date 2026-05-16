@@ -12,6 +12,7 @@ import { getCodeContextFromReference } from './code';
 import { getSymbolEvidenceContextFromReference } from './evidence';
 import { getComprehensiveContextForReference } from './comprehensive';
 import { getFullPrDiffContextForUri } from './git';
+import { getPullRequestDescriptionContextForUri } from './prDescription';
 
 export type ResolvedChatContext = {
 	commentText?: string;
@@ -19,6 +20,7 @@ export type ResolvedChatContext = {
 	threadContext?: string;
 	codeContext?: string;
 	fullDiffContext?: string;
+	prDescriptionContext?: string;
 	symbolEvidenceContext?: string;
 	targetUri?: vscode.Uri;
 	targetRange?: vscode.Range;
@@ -36,6 +38,7 @@ export async function resolveChatRequestContext(
 	const targetRange = locationReference?.range;
 	const codeContext = await getCodeContextFromReference(locationReference, uriReference);
 	const fullDiffContext = await getFullPrDiffContextForUri(targetUri);
+	const prDescriptionContext = await getPullRequestDescriptionContextForUri(targetUri);
 	const commentText = commentFromReference?.text ?? commentTextFromPrompt;
 	const commentAuthor = commentFromReference?.author;
 	const symbolEvidenceContext = await getSymbolEvidenceContextFromReference(
@@ -55,6 +58,7 @@ export async function resolveChatRequestContext(
 		threadContext: commentFromReference?.threadContext,
 		codeContext,
 		fullDiffContext,
+		prDescriptionContext,
 		symbolEvidenceContext,
 		targetUri,
 		targetRange,

@@ -17,6 +17,7 @@ export type AutoDraftParams = {
 	codeContext?: string;
 	threadContext?: string;
 	fullDiffContext?: string;
+	prDescriptionContext?: string;
 	symbolEvidenceContext?: string;
 	deepContext?: string;
 	comprehensiveContext?: string;
@@ -39,6 +40,7 @@ export type ForcedDraftParams = {
 	codeContext?: string;
 	threadContext?: string;
 	fullDiffContext?: string;
+	prDescriptionContext?: string;
 	symbolEvidenceContext?: string;
 	deepContext?: string;
 	comprehensiveContext?: string;
@@ -85,6 +87,19 @@ export async function runAutoDraftPipeline(params: AutoDraftParams): Promise<Aut
 			},
 		];
 		params.logger?.('Depth: pre-seeded deep_context as additional evidence.');
+	}
+	if (params.prDescriptionContext?.trim()) {
+		mergedSeedEvidence = [
+			...mergedSeedEvidence,
+			{
+				id: `E${mergedSeedEvidence.length + 1}`,
+				kind: 'note',
+				source: 'pull_request_description (GitHub API best effort)',
+				summary: 'Pull request title/body fetched from GitHub for intent and scope context.',
+				content: params.prDescriptionContext,
+			},
+		];
+		params.logger?.('Context: pre-seeded pull_request_description as additional evidence.');
 	}
 
 	const pipeline = await runQualityDraftPipeline({
@@ -180,6 +195,7 @@ export function buildForcedStrategyPrompt(params: {
 	codeContext?: string;
 	threadContext?: string;
 	fullDiffContext?: string;
+	prDescriptionContext?: string;
 	symbolEvidenceContext?: string;
 	deepContext?: string;
 	comprehensiveContext?: string;
@@ -222,6 +238,9 @@ export function buildForcedStrategyPrompt(params: {
 	}
 	if (params.fullDiffContext) {
 		sections.push('', `Available change context (changed files):\n${params.fullDiffContext}`);
+	}
+	if (params.prDescriptionContext) {
+		sections.push('', `Pull request description:\n${params.prDescriptionContext}`);
 	}
 	if (params.symbolEvidenceContext) {
 		sections.push('', `Structured symbol evidence:\n${params.symbolEvidenceContext}`);

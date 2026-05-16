@@ -16,6 +16,7 @@ import {
 	getFullPrDiffContextForUri,
 	getPageDiffContext,
 } from '../context/git';
+import { getPullRequestDescriptionContextForUri } from '../context/prDescription';
 import { fetchDuckDuckGoSummary } from '../context/web';
 
 export function buildContextToolRegistry(seed: {
@@ -154,6 +155,18 @@ export function buildContextToolRegistry(seed: {
 				} catch {
 					return undefined;
 				}
+			},
+		},
+		{
+			name: 'pull_request_description',
+			description: 'Best-effort GitHub PR title and description for the current branch. Use to understand intended scope and author intent.',
+			args: {},
+			handler: async () => {
+				const text = await getPullRequestDescriptionContextForUri(seed.commentUri);
+				if (!text) {
+					return undefined;
+				}
+				return { summary: 'pull request description', content: text };
 			},
 		},
 		{

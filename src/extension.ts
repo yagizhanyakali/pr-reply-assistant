@@ -30,6 +30,7 @@ import {
 	getDeepContextForUri,
 } from './context/git';
 import { getComprehensiveContextForComment } from './context/comprehensive';
+import { getPullRequestDescriptionContextForUri } from './context/prDescription';
 import {
 	resolveChatRequestContext,
 	inferStrategyPresetFromPrompt,
@@ -114,10 +115,11 @@ export function activate(context: vscode.ExtensionContext): void {
 				});
 				output.appendLine(`Effort route: ${effort}`);
 
-				const [codeContext, fullDiffContext, symbolEvidenceContext, deepContext, comprehensiveContext] =
+				const [codeContext, fullDiffContext, prDescriptionContext, symbolEvidenceContext, deepContext, comprehensiveContext] =
 					await Promise.all([
 						getCodeContext(commentThread),
 						effort === 'fast' ? Promise.resolve(undefined) : getFullPrDiffContext(commentThread),
+						getPullRequestDescriptionContextForUri(commentThread?.uri),
 						getSymbolEvidenceContext(commentText, commentThread),
 						effort === 'deep'
 							? getDeepContextForComment(commentThread)
@@ -160,9 +162,10 @@ export function activate(context: vscode.ExtensionContext): void {
 								additionalInstructions,
 								selectedTonePreset,
 								codeContext,
-								threadContext,
-								fullDiffContext,
-								symbolEvidenceContext,
+									threadContext,
+									fullDiffContext,
+									prDescriptionContext,
+									symbolEvidenceContext,
 								deepContext,
 								comprehensiveContext,
 								commentAuthor,
@@ -185,6 +188,7 @@ export function activate(context: vscode.ExtensionContext): void {
 							codeContext,
 							threadContext,
 							fullDiffContext,
+							prDescriptionContext,
 							symbolEvidenceContext,
 							deepContext,
 							comprehensiveContext,
@@ -322,6 +326,7 @@ export function activate(context: vscode.ExtensionContext): void {
 							codeContext: resolved.codeContext,
 							threadContext: resolved.threadContext,
 							fullDiffContext: resolved.fullDiffContext,
+							prDescriptionContext: resolved.prDescriptionContext,
 							symbolEvidenceContext: resolved.symbolEvidenceContext,
 							deepContext,
 							comprehensiveContext,
@@ -345,6 +350,7 @@ export function activate(context: vscode.ExtensionContext): void {
 							codeContext: resolved.codeContext,
 							threadContext: resolved.threadContext,
 							fullDiffContext: resolved.fullDiffContext,
+							prDescriptionContext: resolved.prDescriptionContext,
 							symbolEvidenceContext: resolved.symbolEvidenceContext,
 							deepContext,
 							comprehensiveContext,
