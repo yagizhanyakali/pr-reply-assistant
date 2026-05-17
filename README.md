@@ -82,7 +82,7 @@ The Planner has access to a suite of context tools it calls on demand:
 
 ## Requirements
 
-- VS Code or Cursor with `engines.vscode: ^1.102.0`.
+- VS Code or Cursor with `engines.vscode: ^1.100.0`.
 - GitHub Copilot with Chat access enabled.
 - Signed in to GitHub/Copilot inside VS Code.
 
@@ -174,36 +174,16 @@ src/
 
 ## Release Notes
 
-### 0.0.1
+This README describes the current `1.1.0` release. See [CHANGELOG.md](./CHANGELOG.md) for the full version history.
 
-- Initial extension scaffolding.
+### 1.1.0
 
-### 0.1.0
+- Drafts copy or stream only the reply by default; compact/full metadata remains available through `prReplyAssistant.outputDetail`.
+- Re-clicking the same PR comment while a draft is running reuses the active draft instead of opening stacked progress dialogs.
+- Deterministic effort routing chooses fast, standard, or deep context collection based on anchor quality, strategy, and prompt breadth.
+- Optional personal tone examples and best-effort PR title/body context improve draft fit without changing the core workflow.
+- Local git evidence is described as available-change context, avoiding claims that it is a verified GitHub PR diff.
 
-- Added PR comment action + `@prreply` chat participant.
-- Added diff-aware and workspace-aware code context retrieval.
-- Added tone and strategy presets with `Auto` decision mode.
-- Added agentic decision flow (judge / critic / writer).
-- Added optional web enrichment for uncertain decisions.
-- Added token usage reporting in output channel and optional clipboard metadata.
+### 1.0.0
 
-### 0.2.0
-
-- Replaced single-pass judge/critic/writer flow with a full multi-agent quality pipeline: Planner (iterative evidence gathering with tool calls), Decider, Critic, Arbiter, and Writer stages.
-- Added anchor gate and safety gate post-processing.
-- Added `Deep` context depth mode — pre-seeds available-change diagnostics and detailed diffs before the pipeline starts.
-- Added optional setup wizard (language, model, context depth, personal tone examples).
-- Added comprehensive context tool: full-file content, page diff, reference impact, and PR change summary.
-- Added structured symbol evidence: write/read/mutation-signal analysis for symbols in scope.
-- Added `askForExtraInstructions` setting — optional per-draft guidance input.
-- Added `language` setting — replies can be drafted in any language.
-- Added model persistence and fallback by family/vendor.
-- Refactored codebase into focused modules under `src/context/` and `src/pipeline/`.
-
-### Unreleased
-
-- Default visible output is now reply-only; compact/full metadata can be enabled in settings.
-- Duplicate clicks on the same comment reuse the active draft run instead of launching stacked progress notifications.
-- Added deterministic effort routing and personal tone examples.
-- Added best-effort GitHub PR description context from the current branch.
-- Reworded available-change context labels so local git evidence is not overstated as a verified GitHub PR diff.
+- Initial marketplace-ready release with the PR comment action, `@prreply` chat participant, multi-agent pipeline, context tools, strategy/tone presets, setup flow, language support, token reporting, and model persistence.
