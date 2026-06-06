@@ -1,6 +1,7 @@
 export const EXTENSION_NAME = 'PR Reply Assistant';
 export const PARTICIPANT_ID = 'pr-reply-assistant.participant';
 export const DRAFT_REPLY_COMMAND = 'pr-reply-assistant.draftReply';
+export const FIX_COMMENT_COMMAND = 'pr-reply-assistant.fixComment';
 export const RUN_ONBOARDING_COMMAND = 'pr-reply-assistant.runOnboarding';
 export const OPEN_SETTINGS_COMMAND = 'pr-reply-assistant.openSettings';
 export const CONFIG_SECTION = 'prReplyAssistant';

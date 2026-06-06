@@ -172,3 +172,41 @@ async function pickModelWithFallback(prefs: {
 	}
 	return { model: all[0], matchedBy: 'auto' };
 }
+
+export async function resolveSmallModel(
+	logger?: (line: string) => void,
+): Promise<vscode.LanguageModelChat> {
+	if (!hasLmApi()) {
+		throw new Error(
+			'The Language Model API is unavailable in this editor build. Update VS Code/Cursor and ensure Copilot Chat is enabled.',
+		);
+	}
+
+	const allModels = await listAvailableChatModels();
+	if (!allModels.length) {
+		throw new Error(
+			'No language model is available. Sign in to GitHub Copilot and ensure chat access is enabled.',
+		);
+	}
+
+	// Look for typical small/fast models
+	const smallKeywords = ['mini', 'haiku', 'flash', 'small', 'lite', 'gpt-3.5', 'llama-3-8b', 'llama3-8b', '8b'];
+	for (const keyword of smallKeywords) {
+		const found = allModels.find(
+			(m) =>
+				m.id.toLowerCase().includes(keyword) ||
+				m.family.toLowerCase().includes(keyword) ||
+				m.name.toLowerCase().includes(keyword),
+		);
+		if (found) {
+			logger?.(`Auto-selected small model: ${found.name} (${found.id}) based on keyword '${keyword}'`);
+			return found;
+		}
+	}
+
+	// Fallback to first available model
+	const fallback = allModels[0];
+	logger?.(`No small model identified. Falling back to default model: ${fallback.name} (${fallback.id})`);
+	return fallback;
+}
+

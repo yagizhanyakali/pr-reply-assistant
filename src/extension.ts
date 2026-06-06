@@ -3,7 +3,9 @@ import {
 	DRAFT_REPLY_COMMAND,
 	EXTENSION_NAME,
 	PARTICIPANT_ID,
+	FIX_COMMENT_COMMAND,
 } from './constants';
+import { registerFixCommentCommand, DiffContentProvider } from './commentFixer';
 import {
 	CONTEXT_MODE_PRESETS,
 	getStrategyPresetById,
@@ -61,6 +63,15 @@ export function activate(context: vscode.ExtensionContext): void {
 		},
 	);
 	context.subscriptions.push(openSettingsCommand);
+
+	const diffProvider = new DiffContentProvider();
+	context.subscriptions.push(
+		vscode.workspace.registerTextDocumentContentProvider('pr-reply-diff', diffProvider),
+	);
+
+	const fixCommentCommand = registerFixCommentCommand(context, output, diffProvider);
+	context.subscriptions.push(fixCommentCommand);
+	output.appendLine(`Registered command: ${FIX_COMMENT_COMMAND}`);
 
 	const draftReplyCommand = vscode.commands.registerCommand(
 		DRAFT_REPLY_COMMAND,

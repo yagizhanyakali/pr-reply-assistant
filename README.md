@@ -22,7 +22,20 @@ Draft context-aware, well-reasoned replies to GitHub pull request comments direc
 - Infers tone and strategy intent from your prompt text (e.g. "push back firmly").
 - Streams the draft back into the chat response, using the same metadata visibility setting as clipboard output.
 
-### 3) Multi-agent quality pipeline
+### 3) Fix Grammar & Rephrase Comments
+
+- Select any comment, review response, or text in the active editor, right-click, and select **PR Reply Assistant: Fix Grammar or Rephrase** (or run from the Command Palette).
+- Instantly correct grammatical errors, spelling mistakes, or choose to rephrase the tone.
+- **Predefined Presets**:
+  - 📝 **Fix Grammar & Spelling**: Clean up typos and syntax issues while keeping the original phrasing.
+  - 💼 **Professional Rephrase**: Elevate the tone to sound professional, constructive, and clear.
+  - ⚡ **Concise Rephrase**: Condense long comments into short, punchy statements.
+  - ❤️ **Friendly Rephrase**: Warm up comments to make them highly collaborative and supportive.
+- **Smart Small Model Filtering**: Automatically detects and uses smaller/faster models (e.g., `gpt-4o-mini`, `gemini-2.0-flash`, or `haiku`) for near-instant execution.
+- **Interactive Review UX & Side-by-Side Diff**: Displays a preview of the correction in a Quick Pick menu. Developers can launch a native side-by-side diff comparing the original and corrected text (retaining source syntax highlighting) to review all adjustments before applying them.
+- **Comment Prefix Protection**: Safely preserves comment syntax (`//`, `/*`, `#`) if included in the selection.
+
+### 4) Multi-agent quality pipeline
 
 The `Auto` strategy runs a structured, evidence-based pipeline:
 
@@ -39,7 +52,7 @@ Safety gates run after the pipeline:
 - **Safety gate** — overrides a naive "agree" when imperative mutation evidence is present in symbols touched by the diff.
 - **Effort router** — chooses fast, standard, or deep context collection based on anchor quality, strategy, and prompt breadth.
 
-### 4) Deep context retrieval
+### 5) Deep context retrieval
 
 The Planner has access to a suite of context tools it calls on demand:
 
@@ -55,7 +68,7 @@ The Planner has access to a suite of context tools it calls on demand:
 - **Standard** — Planner gathers context on demand. Fast.
 - **Deep** — available-change diagnostics and detailed diffs are pre-seeded into the evidence pack before the pipeline starts. Slower but broader.
 
-### 5) Tone and strategy presets
+### 6) Tone and strategy presets
 
 **Tone presets** (set in Settings or optional setup):
 
@@ -75,7 +88,7 @@ The Planner has access to a suite of context tools it calls on demand:
 | Force push-back | Respectful disagreement with rationale |
 | Force clarify | Focused question + proposed next step |
 
-### 6) Token usage reporting
+### 7) Token usage reporting
 
 - Prompt / completion / total token counts are always written to the extension Output panel.
 - Set `prReplyAssistant.outputDetail` to `compact` or `full` if you want metadata included in clipboard/chat output.
@@ -104,6 +117,13 @@ First use works immediately with defaults. Re-run setup at any time with **PR Re
 3. If `askForExtraInstructions` is enabled, add optional guidance (or leave blank).
 4. The pipeline runs, then the draft reply is copied to clipboard.
 5. Paste into the PR response box.
+
+### Fix Grammar or Rephrase Comments in the Editor
+
+1. Highlight any comment, review draft, or text in your active editor.
+2. Right-click and choose **PR Reply Assistant: Fix Grammar or Rephrase** (or search for it in the Command Palette `Cmd+Shift+P` / `Ctrl+Shift+P`).
+3. Select your desired mode from the Quick Pick list (e.g., *Fix Grammar & Spelling*, *Rephrase: Professional*, *Rephrase: Concise*, *Rephrase: Friendly*).
+4. Review the corrected text preview. You can choose **Compare Changes (Show Diff)** to open a side-by-side comparison with syntax highlighting. Once satisfied, select **Replace Selection** to update the document, or **Copy to Clipboard**.
 
 ### Use `@prreply` in Copilot Chat
 
