@@ -2,6 +2,15 @@
 
 All notable changes to PR Reply Assistant are documented here.
 
+## [1.2.0] — 2026-06-06
+
+### Added
+
+- **Fix Grammar & Rephrase Comments** — Highlight any text/comment in the active editor, right-click, and select the option to fix grammar or rephrase it.
+- **Side-by-Side Diff View** — Side-by-side comparison editor comparing original text selection with corrected suggestions, retaining language syntax highlighting.
+- **Interactive Review UI** — Overlay Quick Pick menu remains active on top of the diff view to easily Replace Selection, Copy to Clipboard, or Cancel.
+- **Auto Small Model Resolution** — Dynamically queries and filters available Copilot/VS Code language models to select small/fast models (like `gpt-4o-mini`, `gemini-flash`, or `haiku`) for rapid execution.
+
 ## [1.1.0] — 2026-05-16
 
 ### Added
